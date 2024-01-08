@@ -99,8 +99,6 @@ def get_all_holes_12x12():
     # the "12" in the SELECT statement is the color_id for green holds, which is the default color when a specific boulder is not selected
     holes = cur.execute(f'SELECT x, y, "12" FROM holes WHERE product_id = 1 AND (x > 0 AND x < 144) AND (y > 0 AND y < 156)').fetchall()
     conn.close()
-    # check if duplicates
-    print(len(holes), len(set(holes)))
     return holes
 
 def normalize_holes(holes):
@@ -156,35 +154,6 @@ def plot_matrix(matrix):
     plt.imshow(matrix, cmap=cmap, norm=norm, origin='lower')
     plt.show()
 
-def get_useable_boulders(limit=100000):
-    """
-    Query the database to get a list of boulders that are useable for generating problems.
-    """
-    conn = sqlite3.connect('data/raw_database.sqlite3')
-    cur = conn.cursor()
-    useable_boulders = cur.execute(
-        f"""
-    SELECT climb_stats.angle, 
-        climb_stats.difficulty_average, 
-        climbs.frames
-    FROM climbs 
-    LEFT OUTER JOIN climb_stats 
-        ON climbs.uuid = climb_stats.climb_uuid
-    WHERE climbs.edge_left > 0 
-    AND climbs.edge_right < 144
-    AND climbs.edge_bottom > 0 
-    AND climbs.edge_top < 156
-    AND climbs.frames_count = 1
-    AND climbs.layout_id = 1
-    AND climb_stats.quality_average != "None"
-    AND climb_stats.ascensionist_count > 3
-    AND climb_stats.quality_average > 2.5
-    LIMIT {limit}
-    """
-    ).fetchall()
-    conn.close()
-    return useable_boulders
-
 def get_most_recent_boulders_frames(n):
     """
     Query the database to get the n most recently created boulders and their frames.
@@ -225,6 +194,74 @@ def get_most_popular_boulders_grades(n):
     conn.close()
     return difficulties
 
+def get_useable_boulders(limit=100000):
+    """
+    Query the database to get a list of boulders that are useable for generating problems.
+    The criteria are:
+    - The boulder fits in 12x12 with kickboard layout
+    - The boulder is not a route (only one frame)
+    - The boulder has at least 4 ascensionists
+    - The boulder has a quality average higher than 2.5
+    - The boulder has a been graded
+    - The frames only contain "r12", "r13", "r14", "r15" (no "r2X" or "r3X") ensuring only the 4 regular colors
+    """
+    conn = sqlite3.connect('data/raw_database.sqlite3')
+    cur = conn.cursor()
+    useable_boulders = cur.execute(
+        f"""
+    SELECT climb_stats.angle, 
+        climb_stats.difficulty_average, 
+        climbs.frames
+    FROM climbs 
+    LEFT OUTER JOIN climb_stats 
+        ON climbs.uuid = climb_stats.climb_uuid
+    WHERE climbs.edge_left > 0 
+    AND climbs.edge_right < 144
+    AND climbs.edge_bottom > 0 
+    AND climbs.edge_top < 156
+    AND climbs.frames_count = 1
+    AND climbs.layout_id = 1
+    AND climb_stats.quality_average != "None"
+    AND climb_stats.ascensionist_count > 3
+    AND climb_stats.quality_average > 2.5
+    AND NOT (climbs.frames LIKE '%r2%')
+    AND NOT (climbs.frames LIKE '%r3%')
+    LIMIT {limit}
+    """
+    ).fetchall()
+    conn.close()
+    return useable_boulders
+
+def create_training_data(max_samples=100000, dtype="uint8", save=True, name=""):
+    """
+    Create a numpy array of training data from the database. The array has the following shape:
+    (num_boulders, 157*161 + 2) where the first column is the angle, the second column is the grade,
+    and the rest of the columns are the holes in the matrix (157*161) where each hole is represented
+    by a number corresponding to its color (12, 13, 14, 15).
+    """
+    useable_boulders_with_frames = get_useable_boulders(max_samples)
+    num_boulders = len(useable_boulders_with_frames)
+    all_angles = []
+    all_grades = []
+    all_holes = []
+
+    for i in tqdm(useable_boulders_with_frames):
+        frames = i[2]
+        holes = frames_to_holes(frames)
+        matrix = get_matrix_from_holes(holes)
+        all_angles.append(i[0])
+        all_grades.append(i[1])
+        all_holes.append(matrix)
+    
+    all_angles = np.array(all_angles, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
+    all_grades = np.array(all_grades, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
+    all_holes = np.array(all_holes, dtype=dtype).reshape((num_boulders, -1))  # shape (num_boulders, 157*161)
+
+    training_data = np.concatenate((all_angles, all_grades, all_holes), axis=1)  # shape (num_boulders, 157*161 + 2)
+    if save:
+        np.save(f'data/{name}.npy', training_data)
+
+
 
 if __name__ == '__main__':
     # frames = get_frames_by_name("Dodge Grand Caravan")
@@ -261,39 +298,5 @@ if __name__ == '__main__':
     # plt.imshow(matrix, cmap='inferno', origin='lower')
     # plt.show()
 
-    max_samples = 100000
-
-    useable_boulders_with_frames = get_useable_boulders(max_samples)
-
-    num_boulders = len(useable_boulders_with_frames)
-
-    all_angles = []
-    all_grades = []
-    all_holes = []
-
-    for i in tqdm(useable_boulders_with_frames):
-        frames = i[2]
-        holes = frames_to_holes(frames)
-        matrix = get_matrix_from_holes(holes)
-        all_angles.append(i[0])
-        all_grades.append(i[1])
-        all_holes.append(matrix)
-
-
-    all_angles = np.array(all_angles, dtype=np.uint8).reshape((num_boulders, 1))  # shape (num_boulders, 1)
-    all_grades = np.array(all_grades, dtype=np.uint8).reshape((num_boulders, 1))  # shape (num_boulders, 1)
-    all_holes = np.array(all_holes, dtype=np.uint8).reshape((num_boulders, -1))  # shape (num_boulders, 157*161)
-
-    training_data = np.concatenate((all_angles, all_grades, all_holes), axis=1)  # shape (num_boulders, 157*161 + 2)
-
-    np.save('data/training_data_flattened_uint8.npy', training_data)
-
-    
-
-
-    
-
-    
-
-
-
+    #create_training_data(name="training_data_flat_uint8")
+    pass
