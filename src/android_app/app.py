@@ -13,6 +13,7 @@ from kivy.uix.spinner import Spinner
 from kivy.uix.image import Image
 from kivy.uix.button import Button
 from kivy.graphics import *
+import matplotlib.pyplot as plt
 
 from scripts.kilter_utils import grade_translations, angle_translations, color_translations, get_all_holes_12x12, get_matrix_from_holes
 
@@ -51,8 +52,8 @@ class MyApp(App):
         top_bar2.add_widget(button3)
 
         # # Create the image below the top bar
-        background_image = Image(source='src/android_app/assets/kilterboard_background.png', fit_mode="scale-down")
-        self.create_image(background_image)
+        holes = get_all_holes_12x12()
+        create_image(holes)
         points_image = Image(source='src/android_app/assets/kilterboard_background_all_holes.png', fit_mode="scale-down")
         
 
@@ -60,26 +61,27 @@ class MyApp(App):
         layout.add_widget(top_bar1)
         layout.add_widget(top_bar2)
         layout.add_widget(points_image)
-        layout.add_widget(background_image)
 
         return layout
 
-    def create_image(self, background_image):
-        """
-        Creates the image of the KilterBoard with the holds
-        """
-        width, height = background_image.size
+def create_image(holes):
+    """
+    Creates the image of the KilterBoard with the holds
+    """
+    fig = plt.figure(figsize=(10.8, 12.22))
+    plt.imshow(plt.imread('src/android_app/assets/kilterboard_background.png'), extent=[0, 1080, 0, 1222])
+    plt.axis('off')
 
-        image = np.zeros((height, width, 4), np.uint8)
-        image[:, :, 3] = 255
+    for x, y, color in holes:
+        x = x * 7.491
+        y = y * 7.509 + 20
+        plt.scatter(x, y, s=1100, edgecolors=color_translations[color], facecolors='none', linewidths=2)
 
-        all_holes = get_all_holes_12x12()
+    ax = plt.axes()
+    ax.set_axis_off()
+    ax.set_facecolor('none')
+    fig.savefig('src/android_app/assets/kilterboard_background_all_holes.png', format='png', dpi=130, transparent=True, bbox_inches='tight', pad_inches=0)
 
-        for x, y, color in all_holes:
-            color = hex_to_rgb(color_translations[color])
-            cv2.circle(image, (x, y), 10, color, -1)
-
-        cv2.imwrite('src/android_app/assets/kilterboard_background_all_holes.png', image)
 
 
 def hex_to_rgb(hex_color):
@@ -91,3 +93,4 @@ def hex_to_rgb(hex_color):
 
 if __name__ == '__main__':
     MyApp().run()
+    pass
