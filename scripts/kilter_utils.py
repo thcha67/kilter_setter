@@ -48,10 +48,10 @@ angle_translations = {
 }
 
 color_translations = {
-    "12" : "00DD00", # green
-    "13" : "00FFFF", # blue
-    "14" : "FF00FF", # pink
-    "15" : "FFA550", # orange
+    "12" : "#00DD00", # green
+    "13" : "#00FFFF", # blue
+    "14" : "#FF00FF", # pink
+    "15" : "#FFA550", # orange
 }
 
 def decompose_frames(frames):
@@ -260,12 +260,12 @@ if __name__ == '__main__':
     # matrix_DGC = get_matrix_from_holes(holes_DGC)
     # plot_matrix(matrix_DGC)
 
-    # all_holes = get_all_holes_12x12()
-    # for hole in all_holes:
-    #     plt.scatter(hole[0], hole[1], c=color_translations[hole[2]])
-    # plt.show()
-    # matrix_all_holes = get_matrix_from_holes(all_holes)
-    # plot_matrix(matrix_all_holes)
+    all_holes = get_all_holes_12x12()
+    for hole in all_holes:
+        plt.scatter(hole[0], hole[1], c=color_translations[hole[2]])
+    plt.show()
+    matrix_all_holes = get_matrix_from_holes(all_holes)
+    plot_matrix(matrix_all_holes)
 
     # recent_1000_boulders = get_most_recent_boulders_frames(1000)
     # lengths = []
