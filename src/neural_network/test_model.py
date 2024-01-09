@@ -1,4 +1,7 @@
 import sys
+import os
+sys.path.append(os.getcwd())
+
 import torch
 import numpy as np
 from scripts.kilter_utils import plot_matrix
@@ -10,9 +13,10 @@ def test_model(model, trained_name, angle, difficulty, denormalize=True):
     model.load_state_dict(torch.load(trained_name))
     model.eval()
 
-    input_features = torch.tensor([angle, difficulty], dtype=torch.float32).to(device)
+    input_features = torch.tensor([angle, difficulty], dtype=torch.float32).reshape((1, 2)).to(device)
 
     with torch.no_grad():
+        print(input_features.shape)
         output = model(input_features)
         output = output.view(157, 161)
         output = output.cpu().numpy()
@@ -29,6 +33,7 @@ def denormalize_matrix(matrix):
 
 if __name__ == '__main__':
     from src.neural_network.gan import Generator
+    from scripts.kilter_utils import get_all_holes_12x12, get_matrix_from_holes
 
     model = Generator()
     trained_name = 'models/gan_generator.pt'
@@ -39,16 +44,14 @@ if __name__ == '__main__':
     generated_hold_matrix = test_model(model, trained_name, angle, difficulty)
 
     num_holds = generated_hold_matrix[generated_hold_matrix > 1].shape
-
-    from scripts.kilter_utils import get_all_holes_12x12, get_matrix_from_holes
-
+    
     all_holes = get_all_holes_12x12()
 
     all_holes = get_matrix_from_holes(all_holes)
 
 
     print(f'Number of holds: {num_holds}')
-    plot_matrix(generated_hold_matrix + all_holes)
+    plot_matrix(generated_hold_matrix)
 
 
 
