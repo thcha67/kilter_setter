@@ -9,10 +9,11 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
 from kivy.uix.image import Image
-from kivy.garden.matplotlib import FigureCanvasKivyAgg 
+from kivy.uix.scatter import Scatter
+from kivy.uix.scatterlayout import ScatterLayout
+from kivy.uix.scatter import ScatterPlane
 from kivy.uix.button import Button
 from kivy.graphics import *
-import matplotlib.pyplot as plt
 
 from scripts.kilter_utils import grade_translations, angle_translations, color_translations, get_all_holes_12x12, get_matrix_from_holes
 

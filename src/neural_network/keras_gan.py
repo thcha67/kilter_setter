@@ -3,6 +3,7 @@ import sqlite3
 import sys, os
 sys.path.append(os.getcwd())
 from tensorflow.keras import models, layers
+from tensorflow.keras.callbacks import EarlyStopping
 import tensorflow as tf
 from scripts.kilter_utils import get_matrix_from_holes, get_all_holes_12x12
 import matplotlib.pyplot as plt
@@ -41,17 +42,36 @@ def create_model():
     model.add(layers.Reshape((157, 145)))
     return model
 
-# model = create_model()
+model = create_model()
 
-mask = get_maks()
+allowed_positions_mask = get_maks()
+print(allowed_positions_mask.shape)
 
-def custom_loss(y_true, y_pred):
-    mask = tf.cast(tf.math.logical_or(
-        tf.math.logical_or(y_pred == 0, y_pred == 12),
-        tf.math.logical_or(y_pred == 13, 
-            tf.math.logical_or(y_pred == 14, y_pred == 15))), 
-        tf.float32)
-    return tf.keras.losses.mean_squared_error(y_true * mask, y_pred * mask)
+def custom_loss_with_mask(allowed_positions_mask):
+    def loss(y_true, y_pred):
+        # Penalize for wrong values
+        value_mask = tf.cast(tf.math.logical_or(
+            tf.math.logical_or(y_pred == 0, y_pred == 12),
+            tf.math.logical_or(y_pred == 13, 
+                tf.math.logical_or(y_pred == 14, y_pred == 15))), 
+            tf.float32)
 
+        # Penalize for wrong positions
+        position_mask = tf.cast(allowed_positions_mask, tf.float32)
+        combined_mask = value_mask * position_mask
 
+        # Calculate loss
+        return tf.keras.losses.mean_squared_error(y_true * combined_mask, y_pred * combined_mask)
+
+    return loss
+
+model.compile(optimizer='adam', loss=custom_loss_with_mask(allowed_positions_mask))
+
+# early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
+# history = model.fit(train_inputs, train_targets, 
+#                     batch_size=32, 
+#                     epochs=100, 
+#                     validation_data=(test_inputs, test_targets),
+#                     callbacks=[early_stopping])
 
