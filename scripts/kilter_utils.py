@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from tqdm import tqdm
+import torch
 
 grade_translations = {
     "10" : "4a/V0",
@@ -47,10 +48,10 @@ angle_translations = {
 }
 
 color_translations = {
-    "12" : "green",
-    "13" : "blue",
-    "14" : "pink",
-    "15" : "yellow",
+    "12" : "00DD00", # green
+    "13" : "00FFFF", # blue
+    "14" : "FF00FF", # pink
+    "15" : "FFA550", # orange
 }
 
 def decompose_frames(frames):
@@ -122,7 +123,7 @@ def plot_matrix(matrix):
     """
     Plot a matrix of 0s and numbers. If not a 0, the number represents the color of the hole.
     """
-    cmap = ListedColormap(['white', *color_translations.values()])
+    cmap = ListedColormap(['#FFFFFF', *color_translations.values()])
     bounds = [0, 11.5, 12.5, 13.5, 14.5, 15.5]
 
     norm = BoundaryNorm(bounds, cmap.N)
@@ -238,6 +239,19 @@ def create_training_data(max_samples=100000, dtype="uint8", save=True, name_inpu
         np.save(f'data/{name_targets or "targets"}.npy', targets)
     return inputs, targets
 
+def load_training_data(device=None, path_input=None, path_target=None):
+    """
+    Load the training data from a numpy array.
+    """
+    path_input = path_input or 'data/inputs.npy'
+    path_target = path_target or 'data/targets.npy'
+    inputs = torch.tensor(np.load(path_input), dtype=torch.float32)
+    targets = torch.tensor(np.load(path_target), dtype=torch.float32)
+    if device:
+        inputs = inputs.to(device)
+        targets = targets.to(device)
+    return inputs, targets
+
 
 
 if __name__ == '__main__':
@@ -276,8 +290,4 @@ if __name__ == '__main__':
     # plt.show()
 
     #create_training_data()
-    inputs = np.load('data/inputs.npy')
-    targets = np.load('data/targets.npy')
-    print(inputs.shape)
-    print(targets.shape)
     pass
