@@ -101,37 +101,12 @@ def get_all_holes_12x12():
     conn.close()
     return holes
 
-def normalize_holes(holes):
-    """
-    Bring the coordinates of the holes into the range (0, 0) to (160, 156).
-    """
-    normalized_holes = []
-    for hole in holes:
-        x = hole[0] + 20
-        y = hole[1] - 4
-        color = hole[2]
-        normalized_holes.append((x, y, color))
-    return normalized_holes
-
-def unnormalize_holes(holes):
-    """
-    Bring the coordinates of the holes into the range (-20, 4) to (140, 152).
-    """
-    unnormalized_holes = []
-    for hole in holes:
-        x = hole[0] - 20
-        y = hole[1] + 4
-        color = hole[2]
-        unnormalized_holes.append((x, y, color))
-    return unnormalized_holes
-
 
 def get_matrix_from_holes(holes, color_as_number=True):
     """
     Create a matrix of 0s and numbers from a list of holes. If not a 
     0, the number represents the color of the hole.
     """
-    holes = normalize_holes(holes)
     matrix = np.zeros((157, 161))
     try:
         for hole in holes:
@@ -232,7 +207,7 @@ def get_useable_boulders(limit=100000):
     conn.close()
     return useable_boulders
 
-def create_training_data(max_samples=100000, dtype="uint8", save=True, name=""):
+def create_training_data(max_samples=100000, dtype="uint8", save=True, name_inputs=None, name_targets=None):
     """
     Create a numpy array of training data from the database. The array has the following shape:
     (num_boulders, 157*161 + 2) where the first column is the angle, the second column is the grade,
@@ -255,11 +230,13 @@ def create_training_data(max_samples=100000, dtype="uint8", save=True, name=""):
     
     all_angles = np.array(all_angles, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
     all_grades = np.array(all_grades, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
-    all_holes = np.array(all_holes, dtype=dtype).reshape((num_boulders, -1))  # shape (num_boulders, 157*161)
+    inputs = np.concatenate((all_angles, all_grades), axis=1)  # shape (num_boulders, 2)
+    targets = np.array(all_holes, dtype=dtype) # shape (num_boulders, 157, 161)
 
-    training_data = np.concatenate((all_angles, all_grades, all_holes), axis=1)  # shape (num_boulders, 157*161 + 2)
     if save:
-        np.save(f'data/{name}.npy', training_data)
+        np.save(f'data/{name_inputs or "inputs"}.npy', inputs)
+        np.save(f'data/{name_targets or "targets"}.npy', targets)
+    return inputs, targets
 
 
 
@@ -298,5 +275,9 @@ if __name__ == '__main__':
     # plt.imshow(matrix, cmap='inferno', origin='lower')
     # plt.show()
 
-    #create_training_data(name="training_data_flat_uint8")
+    #create_training_data()
+    inputs = np.load('data/inputs.npy')
+    targets = np.load('data/targets.npy')
+    print(inputs.shape)
+    print(targets.shape)
     pass
