@@ -260,12 +260,12 @@ if __name__ == '__main__':
     # matrix_DGC = get_matrix_from_holes(holes_DGC)
     # plot_matrix(matrix_DGC)
 
-    all_holes = get_all_holes_12x12()
-    for hole in all_holes:
-        plt.scatter(hole[0], hole[1], c=color_translations[hole[2]])
-    plt.show()
-    matrix_all_holes = get_matrix_from_holes(all_holes)
-    plot_matrix(matrix_all_holes)
+    # all_holes = get_all_holes_12x12()
+    # for hole in all_holes:
+    #     plt.scatter(hole[0], hole[1], c=color_translations[hole[2]])
+    # plt.show()
+    # matrix_all_holes = get_matrix_from_holes(all_holes)
+    # plot_matrix(matrix_all_holes)
 
     # recent_1000_boulders = get_most_recent_boulders_frames(1000)
     # lengths = []
@@ -289,5 +289,5 @@ if __name__ == '__main__':
     # plt.imshow(matrix, cmap='inferno', origin='lower')
     # plt.show()
 
-    #create_training_data()
+    create_training_data()
     pass
