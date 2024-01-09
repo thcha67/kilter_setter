@@ -9,11 +9,10 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
 from kivy.uix.image import Image
-from kivy.uix.scatter import Scatter
-from kivy.uix.scatterlayout import ScatterLayout
-from kivy.uix.scatter import ScatterPlane
+from kivy.garden.matplotlib import FigureCanvasKivyAgg 
 from kivy.uix.button import Button
 from kivy.graphics import *
+import matplotlib.pyplot as plt
 
 from scripts.kilter_utils import grade_translations, angle_translations, color_translations, get_all_holes_12x12, get_matrix_from_holes
 
@@ -53,8 +52,9 @@ class MyApp(App):
         top_bar2.add_widget(button3)
 
         # # Create the image below the top bar
-        image = Image(source='assets/kilterboard_background.png', fit_mode="scale-down")
-        image_with_points = ImageWithPoints()
+        self.create_image_with_points()
+        image_with_points = Image(source='src/android_app/assets/kilterboard_background.png', fit_mode="scale-down")
+        #image_with_points = Image(source='src/android_app/assets/kilterboard_with_points.png', fit_mode="scale-down")
 
         # Add widgets to the main layout
         layout.add_widget(top_bar1)
@@ -63,27 +63,20 @@ class MyApp(App):
 
         return layout
 
-class ImageWithPoints(Widget):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.all_holes = get_all_holes_12x12()
+    def create_image_with_points(self):
+        """
+        Creates an image with the holes in the generated matrix
+        """
+        points = get_all_holes_12x12()
 
-        with self.canvas:
-            self.img = Image(source='assets/kilterboard_background.png')
-            self.add_points(self.all_holes)
-        
-    def add_points(self, points):
-
+        plt.imshow(plt.imread('src/android_app/assets/kilterboard_background.png'))
+        plt.axis('off')
+        plt.tight_layout()
         for x, y, color in points:
-            scale_x
-            Color(*hex_to_rgb(color_translations[color]))
-            Ellipse(pos=(), size=(10, 10))
-
-    def on_size(self, *args):
-        self.img.size = self.size
-
-    def on_pos(self, *args):
-        self.img.pos = self.pos
+            plt.scatter(x, y, color=color_translations[color], s=10)
+        
+        plt.savefig('src/android_app/assets/kilterboard_with_points.png')
+        
 
 def hex_to_rgb(hex_color):
     """

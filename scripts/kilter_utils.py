@@ -108,7 +108,7 @@ def get_matrix_from_holes(holes, color_as_number=True):
     Create a matrix of 0s and numbers from a list of holes. If not a 
     0, the number represents the color of the hole.
     """
-    matrix = np.zeros((157, 161))
+    matrix = np.zeros((157, 145))
     try:
         for hole in holes:
             x = hole[0]
@@ -232,7 +232,7 @@ def create_training_data(max_samples=100000, dtype="uint8", save=True, name_inpu
     all_angles = np.array(all_angles, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
     all_grades = np.array(all_grades, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
     inputs = np.concatenate((all_angles, all_grades), axis=1)  # shape (num_boulders, 2)
-    targets = np.array(all_holes, dtype=dtype) # shape (num_boulders, 157, 161)
+    targets = np.array(all_holes, dtype=dtype) # shape (num_boulders, 157, 145)
 
     if save:
         np.save(f'data/{name_inputs or "inputs"}.npy', inputs)
