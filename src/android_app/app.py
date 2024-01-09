@@ -52,9 +52,8 @@ class MyApp(App):
         top_bar2.add_widget(button3)
 
         # # Create the image below the top bar
-        self.create_image_with_points()
-        image_with_points = Image(source='src/android_app/assets/kilterboard_background.png', fit_mode="scale-down")
-        #image_with_points = Image(source='src/android_app/assets/kilterboard_with_points.png', fit_mode="scale-down")
+        points = get_all_holes_12x12()
+        image_with_points = KilterImageAllPoints(points=points)
 
         # Add widgets to the main layout
         layout.add_widget(top_bar1)
@@ -63,20 +62,34 @@ class MyApp(App):
 
         return layout
 
-    def create_image_with_points(self):
-        """
-        Creates an image with the holes in the generated matrix
-        """
-        points = get_all_holes_12x12()
 
-        plt.imshow(plt.imread('src/android_app/assets/kilterboard_background.png'))
-        plt.axis('off')
-        plt.tight_layout()
-        for x, y, color in points:
-            plt.scatter(x, y, color=color_translations[color], s=10)
-        
-        plt.savefig('src/android_app/assets/kilterboard_with_points.png')
-        
+class KilterImageAllPoints(BoxLayout):
+    def __init__(self, points=None, **kwargs):
+        super(KilterImageAllPoints, self).__init__(**kwargs)
+    
+        self.image = Image(source='src/android_app/assets/kilterboard_background.png', fit_mode="scale-down")
+        self.add_widget(self.image)
+
+        self.points = points
+
+        self.bind(pos=self.update_canvas, size=self.update_canvas)
+        self.bind(pos=self.update_shapes, size=self.update_shapes)
+
+    def update_canvas(self, instance, value):
+        # Clear previous canvas instructions and draw transparent background
+        self.canvas.before.clear()
+        with self.canvas.before:
+            Color(1, 1, 1, 0)  # Set the color with alpha 0 for a transparent background
+            Ellipse(pos=self.pos, size=self.size)
+
+    def update_shapes(self, instance, value):
+        # Clear previous canvas instructions and draw shapes
+        self.canvas.after.clear()
+        with self.canvas.after:
+            for x, y, color in self.points:
+                Color(*hex_to_rgb(color_translations[color]))
+                Ellipse(pos=(self.width * x, self.height * y), size=(self.width * 0.02, self.height * 0.02))
+    
 
 def hex_to_rgb(hex_color):
     """
