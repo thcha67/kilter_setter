@@ -1,6 +1,4 @@
 import sys
-sys.path.append(r'C:\Users\thoma\OneDrive\Documents\kilter\kilter_setter')
-
 import torch
 import numpy as np
 from scripts.kilter_utils import plot_matrix
