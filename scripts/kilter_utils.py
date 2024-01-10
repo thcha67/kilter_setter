@@ -108,7 +108,7 @@ def get_matrix_from_holes(holes, color_as_number=True):
     Create a matrix of 0s and numbers from a list of holes. If not a 
     0, the number represents the color of the hole.
     """
-    matrix = np.zeros((157, 161))
+    matrix = np.zeros((157, 145))
     try:
         for hole in holes:
             x = hole[0]
@@ -117,7 +117,8 @@ def get_matrix_from_holes(holes, color_as_number=True):
             matrix[y, x] = color
     except IndexError:
         print("Holes out of range")
-    return matrix
+
+    return matrix[::4, ::4] # shape 40x37
 
 def plot_matrix(matrix):
     """
@@ -208,12 +209,13 @@ def get_useable_boulders(limit=100000):
     conn.close()
     return useable_boulders
 
-def create_training_data(max_samples=100000, dtype="uint8", save=True, name_inputs=None, name_targets=None):
+def create_training_data(max_samples=100000, dtype="float16", save=True, name_inputs=None, name_targets=None):
     """
-    Create a numpy array of training data from the database. The array has the following shape:
-    (num_boulders, 157*161 + 2) where the first column is the angle, the second column is the grade,
-    and the rest of the columns are the holes in the matrix (157*161) where each hole is represented
-    by a number corresponding to its color (12, 13, 14, 15).
+    Creates and saves two numpy arrays. The first array  is the inputs, with shape (num_boulders, 2) 
+    where the first column is the angle and the second column is the grade.
+    The second array is the targets, with shape (num_boulders, 40, 37) where each row is a matrix 
+    of 0s and numbers. If not a 0, the number represents the color of the hole such that
+    12 = green, 13 = blue, 14 = pink, 15 = orange.
     """
     useable_boulders_with_frames = get_useable_boulders(max_samples)
     num_boulders = len(useable_boulders_with_frames)
@@ -232,11 +234,11 @@ def create_training_data(max_samples=100000, dtype="uint8", save=True, name_inpu
     all_angles = np.array(all_angles, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
     all_grades = np.array(all_grades, dtype=dtype).reshape((num_boulders, 1))  # shape (num_boulders, 1)
     inputs = np.concatenate((all_angles, all_grades), axis=1)  # shape (num_boulders, 2)
-    targets = np.array(all_holes, dtype=dtype) # shape (num_boulders, 157, 161)
+    targets = np.array(all_holes, dtype=dtype) # shape (num_boulders, 40, 37)
 
     if save:
-        np.save(f'data/{name_inputs or "inputs"}.npy', inputs)
-        np.save(f'data/{name_targets or "targets"}.npy', targets)
+        np.save(f'data/{name_inputs or "inputs16"}.npy', inputs)
+        np.save(f'data/{name_targets or "targets16"}.npy', targets)
     return inputs, targets
 
 def load_training_data(device=None, path_input=None, path_target=None):
@@ -252,6 +254,23 @@ def load_training_data(device=None, path_input=None, path_target=None):
         targets = targets.to(device)
     return inputs, targets
 
+def normalize_data(inputs, targets):
+    return inputs / 70, targets / 70
+
+def denormalize_data(inputs, targets):
+    return inputs * 70, targets * 70
+
+def holes_from_matrix(matrix):
+    """
+    Create a list of holes from a matrix (40x37) of 0s and numbers. If not a 0, the number represents the color of the hole.
+    """
+    holes = []
+    for y in range(matrix.shape[0]):
+        for x in range(matrix.shape[1]):
+            color = matrix[y, x]
+            if color > 11.5:
+                holes.append((x, y, color))
+    return holes
 
 
 if __name__ == '__main__':
@@ -289,5 +308,6 @@ if __name__ == '__main__':
     # plt.imshow(matrix, cmap='inferno', origin='lower')
     # plt.show()
 
-    create_training_data()
+    create_training_data(1000, name_inputs="test_inputs", name_targets="test_targets")
+
     pass
