@@ -108,7 +108,7 @@ def get_matrix_from_holes(holes, color_as_number=True):
     Create a matrix of 0s and numbers from a list of holes. If not a 
     0, the number represents the color of the hole.
     """
-    matrix = np.zeros((157, 161))
+    matrix = np.zeros((157, 145))
     try:
         for hole in holes:
             x = hole[0]
