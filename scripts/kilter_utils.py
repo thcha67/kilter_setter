@@ -203,10 +203,12 @@ def get_useable_boulders(limit=100000):
     AND climb_stats.quality_average > 2.5
     AND NOT (climbs.frames LIKE '%r2%')
     AND NOT (climbs.frames LIKE '%r3%')
+    AND NOT LENGTH(climbs.frames) > 280
     LIMIT {limit}
     """
     ).fetchall()
     conn.close()
+    print(f'Number of useable boulders: {len(useable_boulders)}')
     return useable_boulders
 
 def create_training_data(max_samples=100000, dtype="float16", save=True, name_inputs=None, name_targets=None):
@@ -272,11 +274,63 @@ def holes_from_matrix(matrix):
                 holes.append((x, y, color))
     return holes
 
+def map_targets(targets):
+    mapping = {0: 0, 12: 1, 13: 2, 14: 3, 15: 4}
+    return torch.tensor(np.vectorize(mapping.get)(targets), dtype=torch.float32)
+    
+def boulder_holes_to_4d_tensor(boulder):
+    """
+    Converts a list tuples of holes to a 4d tensor.
+    """
+    mapping = {12: 1, 13: 2, 14: 3, 15: 4}
+    matrix = torch.zeros((4, 157, 145))
+    for x, y, color in boulder:
+        color = mapping[int(color)]
+        matrix[color - 1, y, x] = 1
+    return matrix[:, ::4, ::4]
+
+def tensor_data_4d(max_samples=100000):
+    useable_boulders_with_frames = get_useable_boulders(max_samples)
+    big_tensor = []
+    difficulties = []
+    for i in tqdm(useable_boulders_with_frames):
+        frames = i[2]
+        difficulty = i[1]
+        holes = frames_to_holes(frames)
+        tensor = boulder_holes_to_4d_tensor(holes)
+        big_tensor.append(tensor)
+        difficulties.append(difficulty)
+    np.save('data/diff.npy', np.array(difficulties))
+    np.save('data/data.npy', torch.stack(big_tensor))
+    return torch.tensor(difficulties), torch.stack(big_tensor)
+
+def create_sequences(max_samples=100000):
+    useable_boulders_with_frames = get_useable_boulders(max_samples)
+    mapping = {12: 1, 13: 2, 14: 3, 15: 4}
+    sequences = []
+    for i in tqdm(useable_boulders_with_frames):
+        sequence = []
+        frames = i[2]
+        holes = frames_to_holes(frames)
+        for x, y, color in holes:
+            color = int(color)
+            color = mapping[color]
+            sequence.append([x, y, color])
+        sequences.append(sequence)
+    import pickle
+    with open('data/sequences.pkl', 'wb') as f:
+        pickle.dump(sequences, f)
+    return sequences
 
 if __name__ == '__main__':
+    create_sequences(100000)
+    # import sys
+    # np.set_printoptions(suppress=True,linewidth=np.nan,threshold=sys.maxsize)
     # frames = get_frames_by_name("Dodge Grand Caravan")
     # holes_DGC = frames_to_holes(frames)
     # matrix_DGC = get_matrix_from_holes(holes_DGC)
+    # matrix_DGC = map_targets(matrix_DGC)
+
     # plot_matrix(matrix_DGC)
 
     # all_holes = get_all_holes_12x12()
@@ -308,6 +362,29 @@ if __name__ == '__main__':
     # plt.imshow(matrix, cmap='inferno', origin='lower')
     # plt.show()
 
-    create_training_data(1000, name_inputs="test_inputs", name_targets="test_targets")
+    #create_training_data(name_inputs="inputs", name_targets="targets")
 
+    # inputs, targets = load_training_data()
+
+    # num_holds_per_target = np.where(targets > 0, 1, 0).sum(axis=(1, 2))
+    # #print(f'Number of holds: {num_holds_per_target}')
+    # plt.plot(inputs[:, 1], num_holds_per_target, 'o')
+    # plt.ylim(0, 40)
+    # plt.show()
+    # _, data = tensor_data_4d(1000)
+    # data = data.mean(axis=0)
+    # plt.subplot(2, 2, 1)
+    # plt.imshow(data[0], cmap='inferno', origin='lower')
+    # plt.subplot(2, 2, 2)
+    # plt.imshow(data[1], cmap='inferno', origin='lower')
+    # plt.subplot(2, 2, 3)
+    # plt.imshow(data[2], cmap='inferno', origin='lower')
+    # plt.subplot(2, 2, 4)
+    # plt.imshow(data[3], cmap='inferno', origin='lower')
+
+    # plt.show()
+    # diff = torch.tensor(np.load("data/diff.npy"), dtype=torch.float32)
+    # data = torch.tensor(np.load("data/data.npy"), dtype=torch.float32)
+    # print(diff.shape)
+    # print(data.shape)
     pass
